@@ -2,6 +2,8 @@
 
 macOS 메뉴바에 D-Day 카운트다운을 표시하는 앱입니다.
 
+> 🤖 100% AI Generated
+
 ## 설치
 
 **1. 터미널(Terminal) 앱을 열어주세요.**  
