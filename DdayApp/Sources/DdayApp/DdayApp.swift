@@ -1,9 +1,19 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 @main
 struct DdayApp: App {
     @StateObject private var model = DdayModel()
+
+    init() {
+        // 첫 설치 시 자동으로 로그인 항목 등록
+        // ~/Applications 또는 /Applications에 있을 때만 성공함
+        if !UserDefaults.standard.bool(forKey: "didRegisterLoginItem") {
+            try? SMAppService.mainApp.register()
+            UserDefaults.standard.set(true, forKey: "didRegisterLoginItem")
+        }
+    }
 
     var body: some Scene {
         MenuBarExtra {

@@ -37,6 +37,9 @@ struct MenuContent: View {
             }
             launchAtLogin = (SMAppService.mainApp.status == .enabled)
         }
+        .onAppear {
+            launchAtLogin = (SMAppService.mainApp.status == .enabled)
+        }
 
         Divider()
 
