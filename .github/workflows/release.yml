@@ -1,0 +1,33 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cd DdayApp
+          swift build -c release
+
+      - name: Create App Bundle
+        run: |
+          cd DdayApp
+          mkdir -p DdayMenuBar.app/Contents/MacOS
+          cp .build/release/DdayApp DdayMenuBar.app/Contents/MacOS/DdayApp
+          cp ../Info.plist DdayMenuBar.app/Contents/Info.plist
+          codesign --force --deep --sign - DdayMenuBar.app
+          zip -r ../DdayMenuBar.zip DdayMenuBar.app
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: DdayMenuBar.zip
+          generate_release_notes: true
