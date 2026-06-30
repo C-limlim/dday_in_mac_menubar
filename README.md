@@ -4,14 +4,17 @@ macOS 메뉴바에 D-Day 카운트다운을 표시하는 앱입니다.
 
 ## 설치
 
-터미널에 아래 명령어를 붙여넣으세요.
+**1. 터미널(Terminal) 앱을 열어주세요.**  
+Spotlight(`⌘ + Space`) → `Terminal` 검색
 
-```bash
+**2. 아래 명령어를 붙여넣고 실행하세요.**
+
+```zsh
 git clone https://github.com/C-limlim/dday_in_mac_manubar.git && cd dday_in_mac_manubar && ./install.sh
 ```
 
-> **필요 환경**: macOS 13 (Ventura) 이상  
-> Xcode Command Line Tools가 없으면 설치 중 자동으로 안내됩니다.
+> **주의**: 반드시 Terminal(zsh)에서 실행해야 합니다. macOS 보안 권한 요청이 뜨면 허용을 눌러주세요.  
+> **필요 환경**: macOS 13 (Ventura) 이상
 
 ## 사용법
 
@@ -21,6 +24,6 @@ git clone https://github.com/C-limlim/dday_in_mac_manubar.git && cd dday_in_mac_
 
 ## 제거
 
-```bash
+```zsh
 rm -rf ~/Applications/DdayMenuBar.app
 ```
