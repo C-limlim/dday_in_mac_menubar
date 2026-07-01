@@ -12,7 +12,7 @@ Spotlight(`⌘ + Space`) → `Terminal` 검색
 **2. 아래 명령어를 붙여넣고 실행하세요.**
 
 ```zsh
-git clone https://github.com/C-limlim/dday_in_mac_manubar.git && cd dday_in_mac_manubar && ./install.sh
+git clone https://github.com/C-limlim/dday_in_mac_menubar.git && cd dday_in_mac_menubar && ./install.sh
 ```
 
 > **주의**: 반드시 Terminal(zsh)에서 실행해야 합니다. macOS 보안 권한 요청이 뜨면 허용을 눌러주세요.  
