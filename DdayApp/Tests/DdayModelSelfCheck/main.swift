@@ -15,6 +15,33 @@ let items = [
 assert(
     DdayModel.menuBarLabel(for: items, today: today, calendar: calendar) == "시험 D-3     생일 D-10"
 )
+assert(
+    DdayModel.menuBarLabel(
+        for: items,
+        today: today,
+        calendar: calendar,
+        displayMode: .rotating,
+        rotationIndex: 0
+    ) == "시험 D-3"
+)
+assert(
+    DdayModel.menuBarLabel(
+        for: items,
+        today: today,
+        calendar: calendar,
+        displayMode: .rotating,
+        rotationIndex: 1
+    ) == "생일 D-10"
+)
+assert(
+    DdayModel.menuBarLabel(
+        for: items,
+        today: today,
+        calendar: calendar,
+        displayMode: .rotating,
+        rotationIndex: 2
+    ) == "시험 D-3"
+)
 
 let model = DdayModel()
 model.items = [

@@ -70,6 +70,31 @@ struct SettingsView: View {
                 .keyboardShortcut("n")
             }
 
+            HStack {
+                Text("메뉴바 표시")
+                Spacer()
+                Picker("", selection: displayModeBinding) {
+                    Text("전체 표시").tag(MenuBarDisplayMode.all)
+                    Text("하나씩 표시").tag(MenuBarDisplayMode.rotating)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+            }
+
+            if model.menuBarDisplayMode == .rotating {
+                HStack {
+                    Text("전환 간격")
+                    Spacer()
+                    TextField("", value: rotationSecondsBinding, format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 64)
+                    Text("초")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             if model.sortedItems.isEmpty {
                 Text("추가 버튼으로 D-Day를 등록하세요.")
                     .foregroundStyle(.secondary)
@@ -134,6 +159,20 @@ struct SettingsView: View {
             set: { model.update($0) }
         )
     }
+
+    private var displayModeBinding: Binding<MenuBarDisplayMode> {
+        Binding(
+            get: { model.menuBarDisplayMode },
+            set: { model.updateMenuBarDisplayMode($0) }
+        )
+    }
+
+    private var rotationSecondsBinding: Binding<Int> {
+        Binding(
+            get: { model.menuBarRotationSeconds },
+            set: { model.updateMenuBarRotationSeconds($0) }
+        )
+    }
 }
 
 struct DdayItemRow: View {
@@ -149,7 +188,9 @@ struct DdayItemRow: View {
                 .frame(width: 18)
                 .help("드래그해서 순서 변경")
                 .accessibilityLabel("드래그해서 순서 변경")
-                .onDrag(dragStarted)
+                .onDrag(dragStarted) {
+                    Color.clear.frame(width: 1, height: 1)
+                }
 
             Toggle("", isOn: $item.isShownInMenuBar)
                 .toggleStyle(.checkbox)

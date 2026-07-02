@@ -23,24 +23,37 @@ struct DdayItem: Codable, Identifiable, Equatable {
     }
 }
 
+enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
+    case all
+    case rotating
+
+    var id: String { rawValue }
+}
+
 class DdayModel: ObservableObject {
     @Published var menuBarLabel: String = ""
+    @Published private(set) var menuBarDisplayMode: MenuBarDisplayMode = .all
+    @Published private(set) var menuBarRotationSeconds = 10
     @Published var items: [DdayItem] = []
 
     private static let itemsKey = "ddayItems"
+    private static let displayModeKey = "menuBarDisplayMode"
+    private static let rotationSecondsKey = "menuBarRotationSeconds"
+    private var rotationIndex = 0
     private var timer: AnyCancellable?
 
     init() {
         loadSettings()
         refresh()
-        // 매 분 갱신
-        timer = Timer.publish(every: 60, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in self?.refresh() }
+        startTimer()
     }
 
     func refresh() {
-        menuBarLabel = Self.menuBarLabel(for: items)
+        menuBarLabel = Self.menuBarLabel(
+            for: items,
+            displayMode: menuBarDisplayMode,
+            rotationIndex: rotationIndex
+        )
     }
 
     var sortedItems: [DdayItem] {
@@ -49,6 +62,22 @@ class DdayModel: ObservableObject {
 
     var visibleItems: [DdayItem] {
         sortedItems.filter(\.isShownInMenuBar)
+    }
+
+    func updateMenuBarDisplayMode(_ mode: MenuBarDisplayMode) {
+        guard menuBarDisplayMode != mode else { return }
+        menuBarDisplayMode = mode
+        rotationIndex = 0
+        UserDefaults.standard.set(mode.rawValue, forKey: Self.displayModeKey)
+        refresh()
+    }
+
+    func updateMenuBarRotationSeconds(_ seconds: Int) {
+        let seconds = Self.validRotationSeconds(seconds)
+        guard menuBarRotationSeconds != seconds else { return }
+        menuBarRotationSeconds = seconds
+        UserDefaults.standard.set(seconds, forKey: Self.rotationSecondsKey)
+        startTimer()
     }
 
     func addItem() {
@@ -115,12 +144,39 @@ class DdayModel: ObservableObject {
         return name.isEmpty ? dday : "\(name) \(dday)"
     }
 
-    static func menuBarLabel(for items: [DdayItem], today: Date = Date(), calendar: Calendar = .current) -> String {
-        items
+    static func menuBarLabel(
+        for items: [DdayItem],
+        today: Date = Date(),
+        calendar: Calendar = .current,
+        displayMode: MenuBarDisplayMode = .all,
+        rotationIndex: Int = 0
+    ) -> String {
+        let labels = items
             .filter(\.isShownInMenuBar)
             .sorted(by: sortItems)
             .map { itemLabel(for: $0, today: today, calendar: calendar) }
-            .joined(separator: "     ")
+
+        switch displayMode {
+        case .all:
+            return labels.joined(separator: "     ")
+        case .rotating:
+            guard !labels.isEmpty else { return "" }
+            return labels[rotationIndex % labels.count]
+        }
+    }
+
+    private func tick() {
+        if menuBarDisplayMode == .rotating {
+            let count = visibleItems.count
+            rotationIndex = count > 1 ? (rotationIndex + 1) % count : 0
+        }
+        refresh()
+    }
+
+    private func startTimer() {
+        timer = Timer.publish(every: TimeInterval(menuBarRotationSeconds), on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.tick() }
     }
 
     private func saveSettings() {
@@ -130,6 +186,16 @@ class DdayModel: ObservableObject {
 
     private func loadSettings() {
         let defaults = UserDefaults.standard
+        if
+            let rawMode = defaults.string(forKey: Self.displayModeKey),
+            let mode = MenuBarDisplayMode(rawValue: rawMode)
+        {
+            menuBarDisplayMode = mode
+        }
+        if defaults.integer(forKey: Self.rotationSecondsKey) > 0 {
+            menuBarRotationSeconds = Self.validRotationSeconds(defaults.integer(forKey: Self.rotationSecondsKey))
+        }
+
         if
             let data = defaults.data(forKey: Self.itemsKey),
             let decoded = try? JSONDecoder().decode([DdayItem].self, from: data)
@@ -165,5 +231,9 @@ class DdayModel: ObservableObject {
 
     private static func shortName(_ name: String) -> String {
         name.count > 12 ? "\(name.prefix(12))..." : name
+    }
+
+    private static func validRotationSeconds(_ seconds: Int) -> Int {
+        max(seconds, 1)
     }
 }
