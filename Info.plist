@@ -8,6 +8,8 @@
     <string>D-Day 메뉴바</string>
     <key>CFBundleExecutable</key>
     <string>DdayApp</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.user.ddaymenubar</string>
     <key>CFBundleVersion</key>

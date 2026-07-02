@@ -23,8 +23,10 @@ swift build -c release 2>&1 | tail -2
 echo "설치 중..."
 rm -rf "$INSTALL_DIR/$APP_NAME.app"
 mkdir -p "$INSTALL_DIR/$APP_NAME.app/Contents/MacOS"
+mkdir -p "$INSTALL_DIR/$APP_NAME.app/Contents/Resources"
 cp .build/release/DdayApp "$INSTALL_DIR/$APP_NAME.app/Contents/MacOS/"
 cp "$SCRIPT_DIR/Info.plist" "$INSTALL_DIR/$APP_NAME.app/Contents/"
+cp "$SCRIPT_DIR/Resources/AppIcon.icns" "$INSTALL_DIR/$APP_NAME.app/Contents/Resources/"
 
 # 서명
 codesign --force --deep --sign - "$INSTALL_DIR/$APP_NAME.app"

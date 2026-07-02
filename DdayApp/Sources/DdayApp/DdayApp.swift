@@ -21,7 +21,7 @@ struct DdayApp: App {
                 .environmentObject(model)
         } label: {
             HStack(spacing: 8) {
-                if model.targetDate == nil {
+                if model.menuBarLabel.isEmpty {
                     Image(nsImage: Self.menuBarIcon)
                 }
                 if !model.menuBarLabel.isEmpty {

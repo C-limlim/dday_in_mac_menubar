@@ -7,23 +7,23 @@ struct MenuContent: View {
     @State private var launchAtLogin = (SMAppService.mainApp.status == .enabled)
 
     var body: some View {
-        if let date = model.targetDate {
-            Text("목표: \(formatted(date))")
+        if model.visibleItems.isEmpty {
+            Text("표시 중인 D-Day 없음")
                 .foregroundStyle(.secondary)
-            Divider()
+        } else {
+            ForEach(model.visibleItems) { item in
+                Text(DdayModel.itemLabel(for: item))
+                    .foregroundStyle(.secondary)
+            }
         }
 
-        Button("설정...") {
+        Divider()
+
+        Button("D-Day 관리...") {
             NSApp.activate(ignoringOtherApps: true)
             openWindow(id: "settings")
         }
         .keyboardShortcut("s")
-
-        if model.targetDate != nil {
-            Button("초기화") {
-                model.clearTarget()
-            }
-        }
 
         Button(launchAtLogin ? "✓ 로그인 시 자동 실행" : "로그인 시 자동 실행") {
             do {
@@ -48,49 +48,102 @@ struct MenuContent: View {
         }
         .keyboardShortcut("q")
     }
-
-    private func formatted(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone.current
-        return f.string(from: date)
-    }
 }
 
 struct SettingsView: View {
     @EnvironmentObject var model: DdayModel
     @Environment(\.dismiss) var dismiss
-    @State private var selectedDate: Date = Date()
-    @State private var name: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("D-Day 설정")
-                .font(.headline)
+            HStack {
+                Text("D-Day 관리")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    model.addItem()
+                } label: {
+                    Label("추가", systemImage: "plus")
+                }
+                .keyboardShortcut("n")
+            }
 
-            Form {
-                TextField("이벤트 이름", text: $name)
-                    .textFieldStyle(.roundedBorder)
-                DatePicker("목표 날짜", selection: $selectedDate, displayedComponents: .date)
+            if model.sortedItems.isEmpty {
+                Text("추가 버튼으로 D-Day를 등록하세요.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+            } else {
+                List {
+                    ForEach(model.sortedItems) { item in
+                        DdayItemRow(
+                            item: binding(for: item),
+                            delete: { model.delete(item) }
+                        )
+                    }
+                    .onMove { source, destination in
+                        model.move(fromOffsets: source, toOffset: destination)
+                    }
+                }
+                .listStyle(.plain)
+                .frame(maxHeight: 320)
             }
 
             HStack {
-                Button("취소") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("저장") {
-                    model.setTarget(date: selectedDate, name: name)
+                Button("닫기") {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
             }
         }
         .padding(20)
-        .frame(width: 320)
-        .onAppear {
-            selectedDate = model.targetDate ?? Date()
-            name = model.eventName
+        .frame(width: 620)
+    }
+
+    private func binding(for item: DdayItem) -> Binding<DdayItem> {
+        Binding(
+            get: { model.items.first(where: { $0.id == item.id }) ?? item },
+            set: { model.update($0) }
+        )
+    }
+}
+
+struct DdayItemRow: View {
+    @Binding var item: DdayItem
+    let delete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("☰")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+                .help("드래그해서 순서 변경")
+                .accessibilityLabel("드래그해서 순서 변경")
+
+            Toggle("", isOn: $item.isShownInMenuBar)
+                .toggleStyle(.checkbox)
+                .labelsHidden()
+                .help("메뉴바 표시")
+
+            TextField("이벤트 이름", text: $item.name)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 150)
+
+            DatePicker("", selection: $item.date, displayedComponents: .date)
+                .labelsHidden()
+                .frame(width: 150)
+
+            Text(DdayModel.ddayText(for: item.date))
+                .monospacedDigit()
+                .frame(width: 64, alignment: .trailing)
+
+            Button(role: .destructive) {
+                delete()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .help("삭제")
         }
     }
 }
