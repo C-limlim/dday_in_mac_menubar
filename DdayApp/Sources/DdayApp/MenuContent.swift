@@ -1,5 +1,6 @@
 import SwiftUI
 import ServiceManagement
+import UniformTypeIdentifiers
 
 struct MenuContent: View {
     @EnvironmentObject var model: DdayModel
@@ -53,6 +54,7 @@ struct MenuContent: View {
 struct SettingsView: View {
     @EnvironmentObject var model: DdayModel
     @Environment(\.dismiss) var dismiss
+    @State private var draggingItem: DdayItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -73,19 +75,45 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 120)
             } else {
-                List {
-                    ForEach(model.sortedItems) { item in
-                        DdayItemRow(
-                            item: binding(for: item),
-                            delete: { model.delete(item) }
-                        )
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(model.sortedItems) { item in
+                            DdayItemRow(
+                                item: binding(for: item),
+                                dragStarted: {
+                                    draggingItem = item
+                                    return NSItemProvider(object: item.id.uuidString as NSString)
+                                },
+                                delete: { model.delete(item) }
+                            )
+                            .opacity(draggingItem?.id == item.id ? 0.55 : 1)
+                            .background {
+                                if draggingItem?.id == item.id {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.accentColor.opacity(0.08))
+                                }
+                            }
+                            .overlay {
+                                if draggingItem?.id == item.id {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.accentColor, lineWidth: 2)
+                                }
+                            }
+                            .onDrop(
+                                of: [UTType.text],
+                                delegate: DdayDropDelegate(
+                                    target: item,
+                                    draggingItem: $draggingItem,
+                                    model: model
+                                )
+                            )
+                        }
                     }
-                    .onMove { source, destination in
-                        model.move(fromOffsets: source, toOffset: destination)
-                    }
+                    .animation(.easeInOut(duration: 0.18), value: model.sortedItems)
+                    .padding(.vertical, 2)
                 }
-                .listStyle(.plain)
                 .frame(maxHeight: 320)
+                .onDrop(of: [UTType.text], delegate: DdayDropEndDelegate(draggingItem: $draggingItem))
             }
 
             HStack {
@@ -110,6 +138,7 @@ struct SettingsView: View {
 
 struct DdayItemRow: View {
     @Binding var item: DdayItem
+    let dragStarted: () -> NSItemProvider
     let delete: () -> Void
 
     var body: some View {
@@ -120,6 +149,7 @@ struct DdayItemRow: View {
                 .frame(width: 18)
                 .help("드래그해서 순서 변경")
                 .accessibilityLabel("드래그해서 순서 변경")
+                .onDrag(dragStarted)
 
             Toggle("", isOn: $item.isShownInMenuBar)
                 .toggleStyle(.checkbox)
@@ -134,6 +164,8 @@ struct DdayItemRow: View {
                 .labelsHidden()
                 .frame(width: 150)
 
+            Spacer()
+
             Text(DdayModel.ddayText(for: item.date))
                 .monospacedDigit()
                 .frame(width: 64, alignment: .trailing)
@@ -145,5 +177,40 @@ struct DdayItemRow: View {
             }
             .help("삭제")
         }
+    }
+}
+
+private struct DdayDropDelegate: DropDelegate {
+    let target: DdayItem
+    @Binding var draggingItem: DdayItem?
+    let model: DdayModel
+
+    func dropEntered(info: DropInfo) {
+        guard let draggingItem else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            model.move(draggingItem, to: target)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingItem = nil
+        return true
+    }
+}
+
+private struct DdayDropEndDelegate: DropDelegate {
+    @Binding var draggingItem: DdayItem?
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingItem = nil
+        return true
     }
 }

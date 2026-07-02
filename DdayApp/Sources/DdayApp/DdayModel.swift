@@ -88,6 +88,17 @@ class DdayModel: ObservableObject {
         refresh()
     }
 
+    func move(_ item: DdayItem, to target: DdayItem) {
+        let currentItems = sortedItems
+        guard
+            let source = currentItems.firstIndex(where: { $0.id == item.id }),
+            let destination = currentItems.firstIndex(where: { $0.id == target.id }),
+            source != destination
+        else { return }
+
+        move(fromOffsets: IndexSet(integer: source), toOffset: destination > source ? destination + 1 : destination)
+    }
+
     static func ddayText(for date: Date, today: Date = Date(), calendar: Calendar = .current) -> String {
         let todayStart = calendar.startOfDay(for: today)
         let targetStart = calendar.startOfDay(for: date)
@@ -109,7 +120,7 @@ class DdayModel: ObservableObject {
             .filter(\.isShownInMenuBar)
             .sorted(by: sortItems)
             .map { itemLabel(for: $0, today: today, calendar: calendar) }
-            .joined(separator: "  |  ")
+            .joined(separator: "     ")
     }
 
     private func saveSettings() {

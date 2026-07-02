@@ -13,7 +13,7 @@ let items = [
 ]
 
 assert(
-    DdayModel.menuBarLabel(for: items, today: today, calendar: calendar) == "시험 D-3  |  생일 D-10"
+    DdayModel.menuBarLabel(for: items, today: today, calendar: calendar) == "시험 D-3     생일 D-10"
 )
 
 let model = DdayModel()
@@ -24,5 +24,17 @@ model.items = [
 model.move(fromOffsets: IndexSet(integer: 1), toOffset: 0)
 
 assert(
-    DdayModel.menuBarLabel(for: model.items, today: today, calendar: calendar) == "생일 D-10  |  시험 D-3"
+    DdayModel.menuBarLabel(for: model.items, today: today, calendar: calendar) == "생일 D-10     시험 D-3"
+)
+
+let dragModel = DdayModel()
+dragModel.items = [
+    DdayItem(name: "A", date: first, isShownInMenuBar: true, sortOrder: 0),
+    DdayItem(name: "B", date: first, isShownInMenuBar: true, sortOrder: 1),
+    DdayItem(name: "C", date: first, isShownInMenuBar: true, sortOrder: 2)
+]
+dragModel.move(dragModel.items[0], to: dragModel.items[2])
+
+assert(
+    DdayModel.menuBarLabel(for: dragModel.items, today: today, calendar: calendar) == "B D-3     C D-3     A D-3"
 )
