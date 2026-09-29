@@ -1,11 +1,13 @@
 import SwiftUI
 import ServiceManagement
-import UniformTypeIdentifiers
+
+// Select the property wrapper on SDKs that also export a State macro.
+private typealias ViewState<Value> = SwiftUI.State<Value>
 
 struct MenuContent: View {
     @EnvironmentObject var model: DdayModel
     @Environment(\.openWindow) private var openWindow
-    @State private var launchAtLogin = (SMAppService.mainApp.status == .enabled)
+    @ViewState private var launchAtLogin = (SMAppService.mainApp.status == .enabled)
 
     var body: some View {
         if model.visibleItems.isEmpty {
@@ -54,7 +56,7 @@ struct MenuContent: View {
 struct SettingsView: View {
     @EnvironmentObject var model: DdayModel
     @Environment(\.dismiss) var dismiss
-    @State private var draggingItem: DdayItem?
+    @ViewState private var draggingItem: DdayItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -89,7 +91,7 @@ struct SettingsView: View {
                     TextField("", value: rotationSecondsBinding, format: .number)
                         .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.trailing)
-                        .frame(width: 64)
+                        .frame(width: 72)
                     Text("초")
                         .foregroundStyle(.secondary)
                 }
@@ -107,8 +109,8 @@ struct SettingsView: View {
                                 item: binding(for: item),
                                 dragStarted: {
                                     draggingItem = item
-                                    return NSItemProvider(object: item.id.uuidString as NSString)
                                 },
+                                dragEnded: { draggingItem = nil },
                                 delete: { model.delete(item) }
                             )
                             .opacity(draggingItem?.id == item.id ? 0.55 : 1)
@@ -125,7 +127,7 @@ struct SettingsView: View {
                                 }
                             }
                             .onDrop(
-                                of: [UTType.text],
+                                of: [DdayDragHandle.pasteboardType.rawValue],
                                 delegate: DdayDropDelegate(
                                     target: item,
                                     draggingItem: $draggingItem,
@@ -134,11 +136,13 @@ struct SettingsView: View {
                             )
                         }
                     }
-                    .animation(.easeInOut(duration: 0.18), value: model.sortedItems)
                     .padding(.vertical, 2)
                 }
                 .frame(maxHeight: 320)
-                .onDrop(of: [UTType.text], delegate: DdayDropEndDelegate(draggingItem: $draggingItem))
+                .onDrop(
+                    of: [DdayDragHandle.pasteboardType.rawValue],
+                    delegate: DdayDropEndDelegate(draggingItem: $draggingItem)
+                )
             }
 
             HStack {
@@ -167,7 +171,7 @@ struct SettingsView: View {
         )
     }
 
-    private var rotationSecondsBinding: Binding<Int> {
+    private var rotationSecondsBinding: Binding<Double> {
         Binding(
             get: { model.menuBarRotationSeconds },
             set: { model.updateMenuBarRotationSeconds($0) }
@@ -177,20 +181,14 @@ struct SettingsView: View {
 
 struct DdayItemRow: View {
     @Binding var item: DdayItem
-    let dragStarted: () -> NSItemProvider
+    let dragStarted: () -> Void
+    let dragEnded: () -> Void
     let delete: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("☰")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
-                .help("드래그해서 순서 변경")
-                .accessibilityLabel("드래그해서 순서 변경")
-                .onDrag(dragStarted) {
-                    Color.clear.frame(width: 1, height: 1)
-                }
+            DdayDragHandle(itemID: item.id, dragStarted: dragStarted, dragEnded: dragEnded)
+                .frame(width: 18, height: 22)
 
             Toggle("", isOn: $item.isShownInMenuBar)
                 .toggleStyle(.checkbox)
@@ -226,6 +224,10 @@ private struct DdayDropDelegate: DropDelegate {
     @Binding var draggingItem: DdayItem?
     let model: DdayModel
 
+    func validateDrop(info: DropInfo) -> Bool {
+        draggingItem != nil && info.hasItemsConforming(to: [DdayDragHandle.pasteboardType.rawValue])
+    }
+
     func dropEntered(info: DropInfo) {
         guard let draggingItem else { return }
         withAnimation(.easeInOut(duration: 0.18)) {
@@ -234,10 +236,11 @@ private struct DdayDropDelegate: DropDelegate {
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+        DropProposal(operation: draggingItem == nil ? .forbidden : .move)
     }
 
     func performDrop(info: DropInfo) -> Bool {
+        guard draggingItem != nil else { return false }
         draggingItem = nil
         return true
     }
@@ -246,11 +249,16 @@ private struct DdayDropDelegate: DropDelegate {
 private struct DdayDropEndDelegate: DropDelegate {
     @Binding var draggingItem: DdayItem?
 
+    func validateDrop(info: DropInfo) -> Bool {
+        draggingItem != nil && info.hasItemsConforming(to: [DdayDragHandle.pasteboardType.rawValue])
+    }
+
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+        DropProposal(operation: draggingItem == nil ? .forbidden : .move)
     }
 
     func performDrop(info: DropInfo) -> Bool {
+        guard draggingItem != nil else { return false }
         draggingItem = nil
         return true
     }

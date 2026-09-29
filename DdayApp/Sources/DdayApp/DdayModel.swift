@@ -23,17 +23,15 @@ struct DdayItem: Codable, Identifiable, Equatable {
     }
 }
 
-enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
+enum MenuBarDisplayMode: String {
     case all
     case rotating
-
-    var id: String { rawValue }
 }
 
 class DdayModel: ObservableObject {
     @Published var menuBarLabel: String = ""
     @Published private(set) var menuBarDisplayMode: MenuBarDisplayMode = .all
-    @Published private(set) var menuBarRotationSeconds = 10
+    @Published private(set) var menuBarRotationSeconds = 10.0
     @Published var items: [DdayItem] = []
 
     private static let itemsKey = "ddayItems"
@@ -41,8 +39,10 @@ class DdayModel: ObservableObject {
     private static let rotationSecondsKey = "menuBarRotationSeconds"
     private var rotationIndex = 0
     private var timer: AnyCancellable?
+    private let defaults: UserDefaults
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         loadSettings()
         refresh()
         startTimer()
@@ -68,15 +68,16 @@ class DdayModel: ObservableObject {
         guard menuBarDisplayMode != mode else { return }
         menuBarDisplayMode = mode
         rotationIndex = 0
-        UserDefaults.standard.set(mode.rawValue, forKey: Self.displayModeKey)
+        defaults.set(mode.rawValue, forKey: Self.displayModeKey)
         refresh()
+        startTimer()
     }
 
-    func updateMenuBarRotationSeconds(_ seconds: Int) {
+    func updateMenuBarRotationSeconds(_ seconds: Double) {
         let seconds = Self.validRotationSeconds(seconds)
         guard menuBarRotationSeconds != seconds else { return }
         menuBarRotationSeconds = seconds
-        UserDefaults.standard.set(seconds, forKey: Self.rotationSecondsKey)
+        defaults.set(seconds, forKey: Self.rotationSecondsKey)
         startTimer()
     }
 
@@ -174,26 +175,27 @@ class DdayModel: ObservableObject {
     }
 
     private func startTimer() {
-        timer = Timer.publish(every: TimeInterval(menuBarRotationSeconds), on: .main, in: .common)
+        let interval = menuBarDisplayMode == .rotating ? menuBarRotationSeconds : 60
+        timer = Timer.publish(every: TimeInterval(interval), on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.tick() }
     }
 
     private func saveSettings() {
         guard let data = try? JSONEncoder().encode(items) else { return }
-        UserDefaults.standard.set(data, forKey: Self.itemsKey)
+        defaults.set(data, forKey: Self.itemsKey)
     }
 
     private func loadSettings() {
-        let defaults = UserDefaults.standard
         if
             let rawMode = defaults.string(forKey: Self.displayModeKey),
             let mode = MenuBarDisplayMode(rawValue: rawMode)
         {
             menuBarDisplayMode = mode
         }
-        if defaults.integer(forKey: Self.rotationSecondsKey) > 0 {
-            menuBarRotationSeconds = Self.validRotationSeconds(defaults.integer(forKey: Self.rotationSecondsKey))
+        let rotationSeconds = defaults.double(forKey: Self.rotationSecondsKey)
+        if rotationSeconds > 0 {
+            menuBarRotationSeconds = Self.validRotationSeconds(rotationSeconds)
         }
 
         if
@@ -233,7 +235,8 @@ class DdayModel: ObservableObject {
         name.count > 12 ? "\(name.prefix(12))..." : name
     }
 
-    private static func validRotationSeconds(_ seconds: Int) -> Int {
-        max(seconds, 1)
+    static func validRotationSeconds(_ seconds: Double) -> Double {
+        guard seconds.isFinite else { return 10 }
+        return min(max(seconds, 0.5), 60)
     }
 }

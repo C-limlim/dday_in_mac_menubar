@@ -10,8 +10,12 @@ struct DdayApp: App {
         // 첫 설치 시 자동으로 로그인 항목 등록
         // ~/Applications 또는 /Applications에 있을 때만 성공함
         if !UserDefaults.standard.bool(forKey: "didRegisterLoginItem") {
-            try? SMAppService.mainApp.register()
-            UserDefaults.standard.set(true, forKey: "didRegisterLoginItem")
+            do {
+                try SMAppService.mainApp.register()
+                UserDefaults.standard.set(true, forKey: "didRegisterLoginItem")
+            } catch {
+                print("Login item registration error: \(error)")
+            }
         }
     }
 
@@ -23,12 +27,10 @@ struct DdayApp: App {
             HStack(spacing: 8) {
                 if model.menuBarLabel.isEmpty {
                     Image(nsImage: Self.menuBarIcon)
-                }
-                if !model.menuBarLabel.isEmpty {
+                } else {
                     Text(model.menuBarLabel)
                 }
             }
-            .padding(.trailing, -16)
         }
         .menuBarExtraStyle(.menu)
 
