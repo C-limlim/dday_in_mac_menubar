@@ -8,6 +8,8 @@
     <string>D-Day 메뉴바</string>
     <key>CFBundleExecutable</key>
     <string>DdayApp</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.user.ddaymenubar</string>
     <key>CFBundleVersion</key>
@@ -24,5 +26,18 @@
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.user.ddaymenubar.item</string>
+            <key>UTTypeDescription</key>
+            <string>D-Day Item</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
